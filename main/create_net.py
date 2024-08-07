@@ -10,10 +10,24 @@ password = "your-password"
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
 def load_yaml_config(file_path):
+    """
+    Load configuration from a YAML file.
+    
+    :param file_path: Path to the YAML file.
+    :return: Parsed YAML data as a dictionary.
+    """
     with open(file_path, 'r') as file:
         return yaml.safe_load(file)
 
 def check_network_exists(infoblox_url, auth, network):
+    """
+    Check if the network already exists in Infoblox.
+    
+    :param infoblox_url: Base URL for Infoblox WAPI.
+    :param auth: Tuple of (username, password) for authentication.
+    :param network: Network address to check.
+    :return: Reference ID (_ref) of the network if it exists, otherwise None.
+    """
     endpoint = f"{infoblox_url}/network?network={network}"
     try:
         response = requests.get(endpoint, auth=auth, verify=False)
@@ -30,6 +44,14 @@ def check_network_exists(infoblox_url, auth, network):
     return None
 
 def create_network(infoblox_url, auth, network_data):
+    """
+    Create a new network in Infoblox.
+    
+    :param infoblox_url: Base URL for Infoblox WAPI.
+    :param auth: Tuple of (username, password) for authentication.
+    :param network_data: Dictionary containing network configuration data.
+    :return: Response from the Infoblox WAPI.
+    """
     endpoint = f"{infoblox_url}/network"
     payload = {
         "comment": network_data['comment'],
@@ -55,6 +77,14 @@ def create_network(infoblox_url, auth, network_data):
         print(f"An error occurred: {err}")
 
 def create_network_container(infoblox_url, auth, network_container_data):
+    """
+    Create a new network container in Infoblox.
+    
+    :param infoblox_url: Base URL for Infoblox WAPI.
+    :param auth: Tuple of (username, password) for authentication.
+    :param network_container_data: Dictionary containing network container configuration data.
+    :return: Response from the Infoblox WAPI.
+    """
     endpoint = f"{infoblox_url}/networkcontainer"
     payload = {
         "network": network_container_data['network'],
@@ -72,12 +102,15 @@ def create_network_container(infoblox_url, auth, network_container_data):
         print(f"An error occurred: {err}")
 
 def main():
+    """
+    Main function to load configuration, check for existing network, and create network and network container.
+    """
     auth = (username, password)
     
     # Load configuration from YAML file
-    config = load_yaml_config('variables.yml')
+    config = load_yaml_config('/scripts/infoblox/variables.yml')
     
-    # Define the network
+    # Define the network address
     network = config['network']['address']
     
     # Pre-check if the network exists
