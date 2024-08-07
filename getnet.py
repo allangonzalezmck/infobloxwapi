@@ -34,8 +34,20 @@ def get_fixed_addresses(infoblox_url, network, auth):
     except Exception as err:
         print(f"An error occurred: {err}")
 
-def get_reservations(infoblox_url, network, auth):
-    endpoint = f"{infoblox_url}/reservation?network={network}"
+def get_leases(infoblox_url, network, auth):
+    endpoint = f"{infoblox_url}/lease?network={network}"
+    try:
+        response = requests.get(endpoint, auth=auth, verify=False)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.HTTPError as http_err:
+        print(f"HTTP error occurred: {http_err}")
+        print(f"Response text: {response.text}")
+    except Exception as err:
+        print(f"An error occurred: {err}")
+
+def get_ranges(infoblox_url, network, auth):
+    endpoint = f"{infoblox_url}/range?network={network}"
     try:
         response = requests.get(endpoint, auth=auth, verify=False)
         response.raise_for_status()
@@ -55,15 +67,19 @@ def main():
     # Get fixed addresses within the network
     fixed_addresses = get_fixed_addresses(infoblox_url, network, auth)
     
-    # Get reservations within the network
-    reservations = get_reservations(infoblox_url, network, auth)
+    # Get leases within the network
+    leases = get_leases(infoblox_url, network, auth)
     
-    if network_info and fixed_addresses and reservations:
+    # Get ranges within the network
+    ranges = get_ranges(infoblox_url, network, auth)
+    
+    if network_info and fixed_addresses and leases and ranges:
         # Create a template in JSON format
         template = {
             "network_info": network_info,
             "fixed_addresses": fixed_addresses,
-            "reservations": reservations
+            "leases": leases,
+            "ranges": ranges
         }
         
         # Output the template as a JSON file
