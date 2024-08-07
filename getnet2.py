@@ -11,39 +11,11 @@ network = "10.197.185.0/24"
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
 def get_network_info(infoblox_url, network, auth):
-    endpoint = f"{infoblox_url}/network?network={network}"
+    endpoint = f"{infoblox_url}/network?network={network}&_return_fields=disable_dhcp,enable_create_reversezone"
     try:
         response = requests.get(endpoint, auth=auth, verify=False)
         response.raise_for_status()
         return response.json()
-    except requests.exceptions.HTTPError as http_err:
-        print(f"HTTP error occurred: {http_err}")
-        print(f"Response text: {response.text}")
-    except Exception as err:
-        print(f"An error occurred: {err}")
-
-def get_dhcp_status(infoblox_url, network, auth):
-    endpoint = f"{infoblox_url}/network?network={network}&_return_fields=dhcp_members"
-    try:
-        response = requests.get(endpoint, auth=auth, verify=False)
-        response.raise_for_status()
-        network_info = response.json()
-        dhcp_disabled = not network_info[0].get('dhcp_members', [])
-        return dhcp_disabled
-    except requests.exceptions.HTTPError as http_err:
-        print(f"HTTP error occurred: {http_err}")
-        print(f"Response text: {response.text}")
-    except Exception as err:
-        print(f"An error occurred: {err}")
-
-def get_reverse_mapping_zone_status(infoblox_url, network, auth):
-    endpoint = f"{infoblox_url}/network?network={network}&_return_fields=enable_create_reversezone"
-    try:
-        response = requests.get(endpoint, auth=auth, verify=False)
-        response.raise_for_status()
-        network_info = response.json()
-        reverse_mapping_zone = network_info[0].get('enable_create_reversezone', False)
-        return reverse_mapping_zone
     except requests.exceptions.HTTPError as http_err:
         print(f"HTTP error occurred: {http_err}")
         print(f"Response text: {response.text}")
@@ -56,16 +28,14 @@ def main():
     # Get network information
     network_info = get_network_info(infoblox_url, network, auth)
     
-    # Get DHCP status
-    dhcp_disabled = get_dhcp_status(infoblox_url, network, auth)
-    
-    # Get reverse mapping zone status
-    reverse_mapping_zone = get_reverse_mapping_zone_status(infoblox_url, network, auth)
-    
-    if network_info is not None and dhcp_disabled is not None and reverse_mapping_zone is not None:
+    if network_info:
+        network_data = network_info[0]
+        dhcp_disabled = network_data.get('disable_dhcp', False)
+        reverse_mapping_zone = network_data.get('enable_create_reversezone', False)
+        
         # Create a template in JSON format
         template = {
-            "network_info": network_info,
+            "network_info": network_data,
             "dhcp_disabled": dhcp_disabled,
             "enable_create_reversezone": reverse_mapping_zone
         }
@@ -76,7 +46,7 @@ def main():
         
         print("Network template saved to network_template.json")
     else:
-        print("Failed to retrieve some network information.")
+        print("Failed to retrieve network information.")
 
 if __name__ == "__main__":
     main()
