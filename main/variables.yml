@@ -1,9 +1,19 @@
-network:
-  address: "10.197.185.0/24"  # Network address
-  comment: "Your comment here"
-  options:
-    dhcp-lease-time:
-      use_option: false
+networks:
+  - address: "10.197.185.0/24"
+    comment: "Your comment for network 10.197.185.0/24"
+    options:
+      dhcp-lease-time:
+        use_option: false
+  - address: "10.197.186.0/24"
+    comment: "Your comment for network 10.197.186.0/24"
+    options:
+      dhcp-lease-time:
+        use_option: false
+  - address: "10.197.187.0/24"
+    comment: "Your comment for network 10.197.187.0/24"
+    options:
+      dhcp-lease-time:
+        use_option: false
 network_container:
   start_addr: "10.0.0.1"
   end_addr: "10.0.0.10"
