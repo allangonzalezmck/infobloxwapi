@@ -26,93 +26,116 @@ def check_network_exists(infoblox_url, auth, network):
     :param infoblox_url: Base URL for Infoblox WAPI.
     :param auth: Tuple of (username, password) for authentication.
     :param network: Network address to check.
-    :return: Boolean indicating if the network exists and the network reference if it exists.
+    :return: Reference ID (_ref) of the network if it exists, otherwise None.
     """
     endpoint = f"{infoblox_url}/network?network={network}"
     try:
         response = requests.get(endpoint, auth=auth, verify=False)
         response.raise_for_status()
         network_info = response.json()
-        if len(network_info) > 0:
-            return True, network_info[0]['_ref']
-        return False, None
+        if network_info:
+            return network_info[0]['_ref']
+        return None
     except requests.exceptions.HTTPError as http_err:
         print(f"HTTP error occurred: {http_err}")
         print(f"Response text: {response.text}")
-        return False, None
     except Exception as err:
         print(f"An error occurred: {err}")
-        return False, None
+    return None
 
-def check_fixed_address_exists(infoblox_url, auth, ip_address):
+def create_network(infoblox_url, auth, network_data):
     """
-    Check if a fixed address (reservation) exists for a given IP address in Infoblox.
+    Create a new network in Infoblox.
     
     :param infoblox_url: Base URL for Infoblox WAPI.
     :param auth: Tuple of (username, password) for authentication.
-    :param ip_address: IP address to check.
-    :return: Boolean indicating if the fixed address exists.
+    :param network_data: Dictionary containing network configuration data.
+    :return: Response from the Infoblox WAPI.
     """
-    endpoint = f"{infoblox_url}/fixedaddress?ipv4addr={ip_address}"
+    endpoint = f"{infoblox_url}/network"
+    payload = {
+        "network": network_data['address'],
+        "comment": network_data.get('comment', ''),
+        "options": [
+            {
+                "name": "dhcp-lease-time",
+                "num": 51,
+                "use_option": network_data['options']['dhcp-lease-time']['use_option'],
+                "value": "43200",
+                "vendor_class": "DHCP"
+            }
+        ]
+    }
     try:
-        response = requests.get(endpoint, auth=auth, verify=False)
+        response = requests.post(endpoint, auth=auth, json=payload, verify=False)
         response.raise_for_status()
-        fixed_address_info = response.json()
-        return len(fixed_address_info) > 0  # Returns True if fixed address exists, False otherwise
+        return response.json()
     except requests.exceptions.HTTPError as http_err:
         print(f"HTTP error occurred: {http_err}")
         print(f"Response text: {response.text}")
-        return False
+        return None
     except Exception as err:
         print(f"An error occurred: {err}")
-        return False
+        return None
+
+def create_fixed_address(infoblox_url, auth, ip_address):
+    """
+    Create a new fixed address (reservation) in Infoblox.
+    
+    :param infoblox_url: Base URL for Infoblox WAPI.
+    :param auth: Tuple of (username, password) for authentication.
+    :param ip_address: IP address to create a reservation for.
+    :return: Response from the Infoblox WAPI.
+    """
+    endpoint = f"{infoblox_url}/fixedaddress"
+    payload = {
+        "ipv4addr": ip_address
+        # Add more fields here if needed, such as MAC address, name, etc.
+    }
+    try:
+        response = requests.post(endpoint, auth=auth, json=payload, verify=False)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.HTTPError as http_err:
+        print(f"HTTP error occurred: {http_err}")
+        print(f"Response text: {response.text}")
+        return None
+    except Exception as err:
+        print(f"An error occurred: {err}")
+        return None
 
 def main():
+    """
+    Main function to load configuration, check for existing networks, create networks, and create IP reservations.
+    """
     auth = (username, password)
     
     # Load configuration from YAML file
     config = load_yaml_config('/scripts/infoblox/variables.yml')
-    print("Loaded configuration:", config)  # Debug print
-
-    # Check if 'networks' key is in the loaded config
-    if 'networks' not in config:
-        print("'networks' key not found in the configuration")
-        return
     
-    # Ensure 'networks' is a list
-    if not isinstance(config['networks'], list):
-        print("'networks' should be a list in the configuration")
-        return
-
     # Iterate over the list of networks
     for network_data in config['networks']:
-        # Ensure each network data is a dictionary
-        if not isinstance(network_data, dict):
-            print(f"Invalid network data format: {network_data}")
-            continue
-
-        print("Processing network data:", network_data)  # Debug print
-        network = network_data.get('address')
+        network = network_data['address']
         
-        if not network:
-            print("Network address is missing in network data:", network_data)
-            continue
-
         # Pre-check if the network exists
-        network_exists, network_ref = check_network_exists(infoblox_url, auth, network)
-        if network_exists:
+        network_ref = check_network_exists(infoblox_url, auth, network)
+        if network_ref:
             print(f"Network {network} already exists in Infoblox: {network_ref}")
-            
-            # Automatically check the first 10 IP addresses in the network
-            ip_base = '.'.join(network.split('.')[:3])
-            for i in range(1, 11):
-                ip_address = f"{ip_base}.{i}"
-                if check_fixed_address_exists(infoblox_url, auth, ip_address):
-                    print(f"\tReservation exists for {ip_address}")
-                else:
-                    print(f"\tReservation does not exist for {ip_address}")
         else:
-            print(f"Network {network} does not exist in Infoblox.")
+            print(f"Network {network} is available for creation.")
+            # Create the network since it does not exist
+            create_response = create_network(infoblox_url, auth, network_data)
+            if create_response:
+                print(f"Network {network} created successfully.")
+                
+                # Automatically create fixed addresses for the first 10 IPs in the network
+                ip_base = '.'.join(network.split('.')[:3])
+                for i in range(1, 11):
+                    ip_address = f"{ip_base}.{i}"
+                    create_fixed_address(infoblox_url, auth, ip_address)
+                    print(f"Created reservation for {ip_address}")
+            else:
+                print(f"Failed to create network {network}.")
     
 if __name__ == "__main__":
     main()
