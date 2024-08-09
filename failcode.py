@@ -42,7 +42,7 @@ def check_network_exists(infoblox_url, auth, network):
         print(f"Response text: {response.text}")
     except Exception as err:
         print(f"An error occurred: {err}")
-    return None
+        return None
 
 def create_network(infoblox_url, auth, network_data):
     """
@@ -58,7 +58,7 @@ def create_network(infoblox_url, auth, network_data):
         "network": network_data['address'],
         "comment": network_data.get('comment', ''),
         "disable": True
-            }
+    }
     try:
         response = requests.post(endpoint, auth=auth, json=payload, verify=False)
         response.raise_for_status()
@@ -73,7 +73,7 @@ def create_network(infoblox_url, auth, network_data):
 
 def create_fixed_address(infoblox_url, auth, ip_address):
     """
-    Create a new fixed address (reservation) in Infoblox.
+    Create a new fixed address (reservation) in Infoblox with match_client set to "RESERVED".
 
     :param infoblox_url: Base URL for Infoblox WAPI.
     :param auth: Tuple of (username, password) for authentication.
@@ -82,8 +82,8 @@ def create_fixed_address(infoblox_url, auth, ip_address):
     """
     endpoint = f"{infoblox_url}/fixedaddress"
     payload = {
-        "ipv4addr": ip_address
-        # Add more fields here if needed, such as MAC address, name, etc.
+        "ipv4addr": ip_address,
+        "match_client": "RESERVED"  # Use RESERVED to create the reservation without a MAC address
     }
     try:
         response = requests.post(endpoint, auth=auth, json=payload, verify=False)
