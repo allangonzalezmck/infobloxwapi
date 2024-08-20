@@ -98,23 +98,22 @@ def create_fixed_address(infoblox_url, auth, ip_address):
         print(f"An error occurred: {err}")
         return None
 
-def reset_dhcp_service(infoblox_url, auth):
+def restart_grid_services(infoblox_url, auth):
     """
-    Reset the DHCP service on Infoblox.
+    Restart grid services on Infoblox.
     
     :param infoblox_url: Base URL for Infoblox WAPI.
     :param auth: Tuple of (username, password) for authentication.
     :return: Response from the Infoblox WAPI.
     """
-    endpoint = f"{infoblox_url}/dhcpsrv?_function=restartservices"
+    endpoint = f"{infoblox_url}/grid?_function=restartservices"
     payload = {
         "restart_option": "RESTART_IF_NEEDED"
     }
     try:
         response = requests.post(endpoint, auth=auth, json=payload, verify=False)
         response.raise_for_status()
-        print("DHCP service reset successfully.")
-        print("DHCP Service restarted.")  # Added print statement for confirmation
+        print("Grid services restarted successfully.")
     except requests.exceptions.HTTPError as http_err:
         print(f"HTTP error occurred: {http_err}")
         print(f"Response text: {response.text}")
@@ -123,7 +122,7 @@ def reset_dhcp_service(infoblox_url, auth):
 
 def main():
     """
-    Main function to load configuration, check for existing networks, create networks, create IP reservations, and reset DHCP.
+    Main function to load configuration, check for existing networks, create networks, create IP reservations, and restart grid services.
     """
     auth = (username, password)
     
@@ -152,8 +151,8 @@ def main():
                     create_fixed_address(infoblox_url, auth, ip_address)
                     print(f"Created reservation for {ip_address}")
 
-                # Reset the DHCP service after network and IP reservations are created
-                reset_dhcp_service(infoblox_url, auth)
+                # Restart the grid services after network and IP reservations are created
+                restart_grid_services(infoblox_url, auth)
             else:
                 print(f"Failed to create network {network}.")
 
